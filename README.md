@@ -183,7 +183,7 @@ curl -X POST "https://lynx.iotopen.se/api/v2/mqtt/publish/your-installation-id" 
 
 Create one function per measurement in your installation.
 
-![Example function in IoT Open](iot-open-function-example.png)
+![Example function in IoT Open](IoTOpenFunction.png)
 
 The **name** of the function can be anything that makes sense to you, such as `temperaturen`, `temp` or `Sovrum temperatur`. What links the function to the data is the **`topic_read`** metadata, not the name. In the example above the function is called `temperaturen`, has the type `sensor`, and reads the topic `obj/govee/temperatur`.
 
