@@ -56,10 +56,17 @@ sequenceDiagram
 curl -s https://openapi.api.govee.com/router/api/v1/user/devices \
   -H "Govee-API-Key: your-govee-api-key"
 ```
+**Windows PowerShell:** `curl` is an alias for `Invoke-WebRequest` there and uses different syntax. Use `curl.exe` and write the command on one line (PowerShell does not use `\` to continue a line):
+
+```powershell
+curl.exe -X GET "https://openapi.api.govee.com/router/api/v1/user/devices" -H "Content-Type: application/json" -H "Govee-API-Key: your-govee-api-key"
+```
+
+The `curl` test in step 4 below needs different quoting in PowerShell, so on Windows it is easier to test it by running the Node-RED flow instead.
 
 Look for the entry with `"sku": "H5179"` and copy its `device` value.
 
-> **Use the `device` value from this response, not the MAC address.** Govee's API identifies the device by its own device ID. It looks similar to a MAC address, but it does not have to match the MAC printed on the device or shown in the app (it can, for example, have more bytes). If the API says the device is not found, this is the first thing to check.
+> **Use the `device` value from this response, not the MAC address.** Govee's API identifies the device by its own device ID. It looks like a MAC address (colon-separated hex pairs, in our case eight pairs instead of six), but it can be completely different from the MAC address of the device. In our setup the MAC address did not work, and the `device` value from the API did. If the API says the device is not found, this is the first thing to check.
 
 4. Test reading the state of the device:
 
