@@ -37,7 +37,7 @@ sequenceDiagram
 | File | Description |
 |---|---|
 | `govee-h5179-iotopen-flow.json` | The Node-RED flow, with all keys replaced by placeholders |
-| `iot-open-function-example.png` | Example of a function in IoT Open (name, type and metadata) |
+| `IoTOpenFunction.png` | Example of a function in IoT Open (name, type and metadata) |
 | `README.md` | This guide |
 
 ## Prerequisites
