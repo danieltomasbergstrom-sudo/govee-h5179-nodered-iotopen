@@ -207,13 +207,7 @@ Metadata used in the example function:
 | Key | Example value | Purpose |
 |---|---|---|
 | `topic_read` | `obj/govee/temperatur` | The MQTT topic the function reads from (without the installation ID) |
-| `name` | `temperaturen` | Display name |
-| `device_id` | `38108` | IoT Open's own ID for the device in IoT Open. **This is not the Govee device ID.** |
-| `dashboard.widget` | `chart` | Shows the function as a chart on the dashboard |
-| `dashboard.icon` | `thermometer` | Icon on the dashboard |
-| `dashboard.color` | `#dc2626` | Colour on the dashboard |
-| `dashboard.limits` | `-w<18` | Threshold setting used in the example (see the Lynx documentation for the syntax) |
-| `pinned` | `true` | Pins the function in the interface |
+The other metadata fields visible in the screenshot, such as the dashboard settings, only affect how the function is displayed. The flow itself only depends on `topic_read`.
 
 Metadata that is always true about the sensor (name, unit, location, model) belongs on the function. The `msg` text in the payload is sent with every value, so keep it for things that vary per measurement.
 
