@@ -50,7 +50,8 @@ sequenceDiagram
 
 1. Open the **Govee Home** app and go to your profile and settings.
 2. Choose the option to **apply for an API key**. The key is sent to the email address on your account.
-3. List your devices to find the **device ID** and **SKU**:
+3. List your devices to find the **device ID** and **SKU**: 
+Linux, MAC or GIT Bash:
 
 ```bash
 curl -s https://openapi.api.govee.com/router/api/v1/user/devices \
