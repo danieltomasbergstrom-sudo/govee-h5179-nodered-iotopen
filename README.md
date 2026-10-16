@@ -9,6 +9,7 @@ This repository documents the whole chain: getting the Govee API key, installing
 The sensor reports to Govee's cloud over wifi. Node-RED never talks to the sensor directly. It asks the Govee cloud for the latest values every 5 minutes (REST), and then pushes them to IoT Open (REST). Only inside IoT Open does the data become MQTT.
 
 ```mermaid
+%%{init: {"sequence": {"mirrorActors": false}}}%%
 sequenceDiagram
     participant S as Govee H5179
     participant C as Govee Cloud
@@ -21,7 +22,7 @@ sequenceDiagram
         N->>I: POST /api/v2/mqtt/publish/{installation_id} (temperature)
         N->>I: POST /api/v2/mqtt/publish/{installation_id} (humidity)
     end
-    Note over I: Published on the MQTT broker as {installation_id}/obj/govee/temperatur, read by the function via topic_read
+    Note over C,I: Published on MQTT as {installation_id}/obj/govee/temperatur<br/>and read by the function via topic_read
 ```
 
 | Step | Protocol | Direction |
