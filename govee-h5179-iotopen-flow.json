@@ -1,0 +1,219 @@
+[
+  {
+    "id": "govee-iot-tab",
+    "type": "tab",
+    "label": "Govee H5179 to IoT-Open",
+    "disabled": false,
+    "info": "Govee Cloud API -> Node-RED -> IoT Open (Lynx) REST publish API.\n\nBefore deploying, replace the placeholders (your-...) in the two function nodes:\n- 'Build Govee request': Govee API key and Govee device ID (the 'device' value from Govee's device list, not necessarily the MAC address)\n- 'Extract + prepare IoT-Open messages': IoT Open API key and installation ID. Also check GOVEE_TEMP_UNIT.\n\nNever export or commit this flow with real keys filled in."
+  },
+  {
+    "id": "govee-inject",
+    "type": "inject",
+    "z": "govee-iot-tab",
+    "name": "Every 5 min (and on deploy)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "300",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 170,
+    "y": 140,
+    "wires": [
+      [
+        "govee-request"
+      ]
+    ]
+  },
+  {
+    "id": "govee-request",
+    "type": "function",
+    "z": "govee-iot-tab",
+    "name": "Build Govee request",
+    "func": "// Replace the placeholders below with your own values. Never commit real keys.\nconst GOVEE_API_KEY = \"your-govee-api-key\";\nconst GOVEE_DEVICE_ID = \"your-device-id\"; // the 'device' value from Govee's device list (see README step 1)\nconst GOVEE_SKU = \"H5179\";\n\nif (GOVEE_API_KEY.startsWith(\"your-\") || GOVEE_DEVICE_ID.startsWith(\"your-\")) {\n    node.error(\"Fill in your Govee API key and device ID in 'Build Govee request'.\", msg);\n    return null;\n}\nmsg.method = \"POST\";\nmsg.url = \"https://openapi.api.govee.com/router/api/v1/device/state\";\nmsg.headers = {\n    \"Content-Type\": \"application/json\",\n    \"Govee-API-Key\": GOVEE_API_KEY\n};\nmsg.payload = {\n    requestId: \"nodered-h5179\",\n    payload: { sku: GOVEE_SKU, device: GOVEE_DEVICE_ID }\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 430,
+    "y": 140,
+    "wires": [
+      [
+        "govee-http",
+        "govee-raw-debug"
+      ]
+    ]
+  },
+  {
+    "id": "govee-http",
+    "type": "http request",
+    "z": "govee-iot-tab",
+    "name": "Get Govee device state",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 690,
+    "y": 120,
+    "wires": [
+      [
+        "parse-govee",
+        "govee-response-debug"
+      ]
+    ]
+  },
+  {
+    "id": "govee-raw-debug",
+    "type": "debug",
+    "z": "govee-iot-tab",
+    "name": "Govee request (inactive by default)",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 710,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "govee-response-debug",
+    "type": "debug",
+    "z": "govee-iot-tab",
+    "name": "Govee response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 700,
+    "y": 60,
+    "wires": []
+  },
+  {
+    "id": "parse-govee",
+    "type": "function",
+    "z": "govee-iot-tab",
+    "name": "Extract + prepare IoT-Open messages",
+    "func": "// Extract temperature/humidity from the Govee response and prepare two REST publish calls to IoT Open (Lynx).\n\n// Unit that Govee reports the temperature in. Set to \"F\" if your values look like Fahrenheit.\n// IoT Open always receives Celsius.\nconst GOVEE_TEMP_UNIT = \"C\";\n\nif (msg.statusCode < 200 || msg.statusCode >= 300) {\n    node.error(\"Govee HTTP error: \" + msg.statusCode, msg);\n    return null;\n}\nconst response = msg.payload;\nif (!response || Number(response.code) !== 200 || !response.payload || !Array.isArray(response.payload.capabilities)) {\n    node.error(\"Unexpected Govee response. Check API key, SKU and device ID.\", msg);\n    return null;\n}\nconst caps = response.payload.capabilities;\nfunction getValue(instance) {\n    const item = caps.find(c => c.instance === instance && c.state && c.state.value !== undefined && c.state.value !== null);\n    return item ? Number(item.state.value) : NaN;\n}\nconst rawTemperature = getValue(\"sensorTemperature\");\nconst humidity = getValue(\"sensorHumidity\");\nif (!Number.isFinite(rawTemperature) || !Number.isFinite(humidity)) {\n    node.error(\"sensorTemperature/sensorHumidity not found in the Govee response.\", msg);\n    return null;\n}\nif (GOVEE_TEMP_UNIT === \"C\" && rawTemperature > 45) {\n    node.warn(\"Temperature \" + rawTemperature + \" looks like Fahrenheit. Set GOVEE_TEMP_UNIT to F if so.\");\n}\nconst temperature = GOVEE_TEMP_UNIT === \"F\" ? Math.round((rawTemperature - 32) * 5 / 9 * 10) / 10 : rawTemperature;\nnode.status({ text: temperature + \" °C / \" + humidity + \" %RH\" });\n\n// --- IoT Open (Lynx) settings. Replace the placeholders. Never commit real keys. ---\nconst IOTOPEN_API_KEY = \"your-iot-open-api-key\";\nconst IOTOPEN_INSTALLATION_ID = \"your-installation-id\";\n// These must match 'topic_read' on the functions in IoT Open.\n// The installation ID is added as a prefix automatically by the publish API.\nconst TOPIC_TEMPERATURE = \"obj/govee/temperatur\";\nconst TOPIC_HUMIDITY = \"obj/govee/luftfuktighet\";\n\nif (IOTOPEN_API_KEY.startsWith(\"your-\") || IOTOPEN_INSTALLATION_ID.startsWith(\"your-\")) {\n    node.warn(\"Govee data was read, but the IoT Open settings are not filled in yet.\");\n    return null;\n}\nconst baseUrl = \"https://lynx.iotopen.se/api/v2/mqtt/publish/\" + encodeURIComponent(IOTOPEN_INSTALLATION_ID);\nfunction publish(topic, value, unit) {\n    return {\n        method: \"POST\",\n        url: baseUrl,\n        headers: {\n            \"Content-Type\": \"application/json\",\n            \"Accept\": \"application/json\",\n            \"X-API-Key\": IOTOPEN_API_KEY\n        },\n        payload: {\n            topic: topic,\n            payload: { value: value, msg: \"source=Govee H5179; unit=\" + unit }\n        }\n    };\n}\nreturn [publish(TOPIC_TEMPERATURE, temperature, \"C\"), publish(TOPIC_HUMIDITY, humidity, \"%RH\")];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 980,
+    "y": 120,
+    "wires": [
+      [
+        "iot-temp-http"
+      ],
+      [
+        "iot-hum-http"
+      ]
+    ]
+  },
+  {
+    "id": "iot-temp-http",
+    "type": "http request",
+    "z": "govee-iot-tab",
+    "name": "Publish temperature to IoT-Open",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1250,
+    "y": 80,
+    "wires": [
+      [
+        "iot-temp-debug"
+      ]
+    ]
+  },
+  {
+    "id": "iot-hum-http",
+    "type": "http request",
+    "z": "govee-iot-tab",
+    "name": "Publish humidity to IoT-Open",
+    "method": "use",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 1240,
+    "y": 180,
+    "wires": [
+      [
+        "iot-hum-debug"
+      ]
+    ]
+  },
+  {
+    "id": "iot-temp-debug",
+    "type": "debug",
+    "z": "govee-iot-tab",
+    "name": "IoT-Open temperature response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1520,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "iot-hum-debug",
+    "type": "debug",
+    "z": "govee-iot-tab",
+    "name": "IoT-Open humidity response",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 1510,
+    "y": 180,
+    "wires": []
+  }
+]
