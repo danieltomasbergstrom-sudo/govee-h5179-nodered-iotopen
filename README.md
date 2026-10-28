@@ -50,35 +50,45 @@ sequenceDiagram
 
 1. Open the **Govee Home** app and go to your profile and settings.
 2. Choose the option to **apply for an API key**. The key is sent to the email address on your account.
-3. List your devices to find the **device ID** and **SKU**: 
-Linux, MAC or GIT Bash:
+3. List your devices to find the **device ID** and **SKU**.
 
-```bash
-curl -s https://openapi.api.govee.com/router/api/v1/user/devices \
-  -H "Govee-API-Key: your-govee-api-key"
-```
-**Windows PowerShell:** `curl` is an alias for `Invoke-WebRequest` there and uses different syntax. Use `curl.exe` and write the command on one line (PowerShell does not use `\` to continue a line):
+   Linux, macOS or Git Bash:
 
-```powershell
-curl.exe -X GET "https://openapi.api.govee.com/router/api/v1/user/devices" -H "Content-Type: application/json" -H "Govee-API-Key: your-govee-api-key"
-```
+   ```bash
+   curl -s https://openapi.api.govee.com/router/api/v1/user/devices \
+     -H "Govee-API-Key: your-govee-api-key"
+   ```
 
-The `curl` test in step 4 below needs different quoting in PowerShell, so on Windows it is easier to test it by running the Node-RED flow instead.
+   Windows PowerShell (`curl` is an alias for `Invoke-WebRequest` there, so use `curl.exe` and write the command on one line):
 
-Look for the entry with `"sku": "H5179"` and copy its `device` value.
+   ```powershell
+   curl.exe -X GET "https://openapi.api.govee.com/router/api/v1/user/devices" -H "Content-Type: application/json" -H "Govee-API-Key: your-govee-api-key"
+   ```
 
-> **Use the `device` value from this response, not the MAC address.** Govee's API identifies the device by its own device ID. It looks like a MAC address (colon-separated hex pairs, in our case eight pairs instead of six), but it can be completely different from the MAC address of the device. In our setup the MAC address did not work, and the `device` value from the API did. If the API says the device is not found, this is the first thing to check.
+   Look for the entry with `"sku": "H5179"` and copy its `device` value.
 
-4. Test reading the state of the device:
+   > **Use the `device` value from this response, not the MAC address.** Govee's API identifies the device by its own device ID. It looks like a MAC address (colon-separated hex pairs, in our case eight pairs instead of six), but it can be completely different from the MAC address of the device. In our setup the MAC address did not work, and the `device` value from the API did. If the API says the device is not found, this is the first thing to check.
 
-```bash
-curl -s -X POST https://openapi.api.govee.com/router/api/v1/device/state \
-  -H "Content-Type: application/json" \
-  -H "Govee-API-Key: your-govee-api-key" \
-  -d '{"requestId":"test","payload":{"sku":"H5179","device":"your-device-id"}}'
-```
+4. Test reading the state of the device, using the SKU and the device ID from step 3.
 
-The response contains `capabilities` with the instances `sensorTemperature` and `sensorHumidity`. The Govee API has a daily request limit per account. One request every 5 minutes is 288 per day, which is well within it.
+   Linux, macOS or Git Bash:
+
+   ```bash
+   curl -s -X POST https://openapi.api.govee.com/router/api/v1/device/state \
+     -H "Content-Type: application/json" \
+     -H "Govee-API-Key: your-govee-api-key" \
+     -d '{"requestId":"test","payload":{"sku":"H5179","device":"your-device-id"}}'
+   ```
+
+   Windows PowerShell (one line):
+
+   ```powershell
+   Invoke-RestMethod -Method Post -Uri "https://openapi.api.govee.com/router/api/v1/device/state" -Headers @{ "Govee-API-Key" = "your-govee-api-key" } -ContentType "application/json" -Body '{"requestId":"test","payload":{"sku":"H5179","device":"your-device-id"}}' | ConvertTo-Json -Depth 10
+   ```
+
+   The response contains `capabilities` with the instances `sensorTemperature` and `sensorHumidity`. In our test the temperature came back as `68.18` for a room of about 20 °C, which means the API reports **Fahrenheit**. The flow in this repository converts it to Celsius before sending it to IoT Open (see "Celsius or Fahrenheit" below).
+
+The Govee API has a daily request limit per account. One request every 5 minutes is 288 per day, which is well within it.
 
 API reference: <https://developer.govee.com/>
 
